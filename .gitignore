@@ -44,6 +44,7 @@ next-env.d.ts
 # OpenNext / Cloudflare build output
 .open-next
 .dev.vars
+.wrangler
 
 # local runtime cache (may contain SMS bodies — never commit)
 /data/*
