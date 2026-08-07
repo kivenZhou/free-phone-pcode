@@ -10,6 +10,7 @@ export interface FiltersProps {
   onQueryChange: (v: string) => void;
   onRefresh: () => void;
   refreshing: boolean;
+  showRefresh?: boolean;
 }
 
 export function Filters({
@@ -22,6 +23,7 @@ export function Filters({
   onQueryChange,
   onRefresh,
   refreshing,
+  showRefresh = true,
 }: FiltersProps) {
   return (
     <div className="glass-panel relative z-50 overflow-visible rounded-2xl p-5 lg:p-6">
@@ -67,14 +69,16 @@ export function Filters({
           />
         </label>
 
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={refreshing}
-          className="btn-primary shrink-0 lg:min-w-[10rem]"
-        >
-          {refreshing ? "同步中…" : "同步全部来源"}
-        </button>
+        {showRefresh ? (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="btn-primary shrink-0 lg:min-w-[10rem]"
+          >
+            {refreshing ? "同步中…" : "同步全部来源"}
+          </button>
+        ) : null}
       </div>
     </div>
   );

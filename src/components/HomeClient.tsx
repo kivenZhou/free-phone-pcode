@@ -2,30 +2,19 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CountryOption } from "./CountrySelect";
 import { CountryGrid } from "./CountryGrid";
 import { Disclaimer } from "./Disclaimer";
 import { FavoritesList } from "./FavoritesList";
 import { Filters } from "./Filters";
-import { NumberTable, type NumberRow } from "./NumberTable";
+import { NumberTable } from "./NumberTable";
+import { StaticDemoBanner } from "./StaticDemoBanner";
 import { useFavorites } from "@/hooks/useFavorites";
-
-interface ApiResponse {
-  numbers: NumberRow[];
-  countries: CountryOption[];
-  providers: Array<{ id: string; name: string; enabled: boolean }>;
-  health: Array<{
-    id: string;
-    name: string;
-    status: string;
-    lastError?: string;
-    numberCount?: number;
-  }>;
-  lastRefreshAt: number;
-  total: number;
-  view?: "countries" | "numbers";
-  syncing?: boolean;
-}
+import {
+  fetchNumbersCatalog,
+  triggerRefresh,
+  type NumbersCatalogResponse,
+} from "@/lib/api-client";
+import { isStaticExport } from "@/lib/site";
 
 export function HomeClient() {
   const router = useRouter();
@@ -38,7 +27,7 @@ export function HomeClient() {
 
   const [provider, setProvider] = useState("");
   const [lineType, setLineType] = useState("");
-  const [data, setData] = useState<ApiResponse | null>(null);
+  const [data, setData] = useState<NumbersCatalogResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +52,7 @@ export function HomeClient() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/numbers?${queryString}`);
-      if (!res.ok) throw new Error(`加载失败 (${res.status})`);
-      const json = (await res.json()) as ApiResponse;
+      const json = await fetchNumbersCatalog(queryString);
       setData(json);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -113,9 +100,10 @@ export function HomeClient() {
   }
 
   async function onRefresh() {
+    if (isStaticExport()) return;
     setRefreshing(true);
     try {
-      await fetch("/api/refresh", { method: "POST" });
+      await triggerRefresh();
       await load();
     } finally {
       setRefreshing(false);
@@ -166,6 +154,7 @@ export function HomeClient() {
           先选国家旗帜，再浏览该国公开临时号；支持收藏常用号码，快速回到收短信页面。
         </p>
         <Disclaimer />
+        <StaticDemoBanner builtAt={data?.builtAt} />
       </header>
 
       {!showFavorites ? (
@@ -179,6 +168,7 @@ export function HomeClient() {
           onQueryChange={onQueryChange}
           onRefresh={onRefresh}
           refreshing={refreshing}
+          showRefresh={!isStaticExport()}
         />
       ) : null}
 

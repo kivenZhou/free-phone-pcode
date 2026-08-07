@@ -44,3 +44,6 @@ next-env.d.ts
 # local runtime cache (may contain SMS bodies — never commit)
 /data/*
 !/data/.gitkeep
+
+# GitHub Pages build snapshot (generated in CI)
+/public/static-data/store.json

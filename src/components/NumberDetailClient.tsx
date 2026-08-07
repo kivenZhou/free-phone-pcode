@@ -6,12 +6,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PROVIDER_LABELS } from "@/lib/provider-labels";
 import type { LineType } from "@/lib/phone";
 import { favoriteFromNumberRow } from "@/lib/favorites";
+import { fetchNumberMessages } from "@/lib/api-client";
+import { isStaticExport } from "@/lib/site";
 import { CopyButton } from "./CopyButton";
 import { Disclaimer } from "./Disclaimer";
 import { FavoriteButton } from "./FavoriteButton";
 import { LineTypeBadge } from "./LineTypeBadge";
 import { MessageList, type MessageItem } from "./MessageList";
 import { PhoneDisplay } from "./PhoneDisplay";
+import { StaticDemoBanner } from "./StaticDemoBanner";
 
 interface NumberInfo {
   id: string;
@@ -37,18 +40,15 @@ export function NumberDetailClient({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(() => !isStaticExport());
 
   const load = useCallback(
     async (force = false) => {
       setError(null);
       try {
-        const res = await fetch(
-          `/api/numbers/${encodeURIComponent(id)}/messages${force ? "?force=1" : ""}`,
-        );
-        const json = await res.json();
-        if (!res.ok && !json.messages) {
-          throw new Error(json.error || `加载失败 (${res.status})`);
+        const json = await fetchNumberMessages(id, force);
+        if (json.error && !json.messages) {
+          throw new Error(json.error);
         }
         setNumber(json.number);
         setMessages(json.messages || []);
@@ -132,6 +132,7 @@ export function NumberDetailClient({ id }: { id: string }) {
       </div>
 
       <header className="animate-rise space-y-6">
+        <StaticDemoBanner />
         <div className="hero-badge">FREE PCODE</div>
         {number ? (
           <div className="flex flex-wrap items-center gap-4">

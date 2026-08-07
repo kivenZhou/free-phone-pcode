@@ -101,6 +101,11 @@ export function hasStoredNumbers(): boolean {
   return readStore().numbers.length > 0;
 }
 
+/** Read current store snapshot (build/export scripts). */
+export function readStoreForExport(): StoreShape {
+  return readStore();
+}
+
 /** Replace one provider's numbers + health in a single atomic write. */
 export function applyProviderSync(
   providerId: string,

@@ -65,6 +65,30 @@ npm start
 
 推荐 Docker / VPS / Vercel（Node runtime）等支持原生模块的环境。
 
+### GitHub Pages（静态演示）
+
+仓库已配置 GitHub Actions，推送 `main` 后会自动部署静态演示站：
+
+**https://kivenzhou.github.io/free-phone-pcode/**
+
+GitHub Pages **只能托管静态文件**，因此演示版与自托管 Node 版有区别：
+
+| 能力 | Node 自托管 | GitHub Pages |
+|------|-------------|--------------|
+| 浏览国家 / 号码列表 | ✅ 实时 | ✅ 构建快照 |
+| 查看短信 | ✅ 实时拉取 | ⚠️ 仅构建时预缓存的号码（默认 300 个） |
+| 手动同步来源 | ✅ | ❌ |
+| 自动后台刷新 | ✅ | ❌（每 6 小时 CI 重建） |
+
+本地构建静态版（需联网同步数据，耗时较长）：
+
+```bash
+npm run build:pages
+# 产物在 out/，可用 npx serve out 预览
+```
+
+可在仓库 **Settings → Pages** 确认 Source 为 **GitHub Actions**。首次 push 后若 404，等待 workflow 完成即可。
+
 ---
 
 ## 环境变量
