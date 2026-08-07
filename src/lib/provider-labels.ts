@@ -1,0 +1,16 @@
+export const PROVIDER_LABELS: Record<string, string> = {
+  onlinesim: "OnlineSIM",
+  freephonenum: "FreePhoneNum",
+  smscodeonline: "SMSCodeOnline",
+  mianfeisms: "免费接码 SMS",
+  goinsms: "GoInSMS",
+  yunjiema: "云接码",
+  yunduanxin: "云短信",
+  yunjiematop: "云接码 Top",
+  storytrain: "StoryTrain",
+  anonymsms: "AnonymSMS",
+  zsrq: "云短信 ZSRQ",
+  "receive-smss": "Receive-SMSS",
+  sms24: "SMS24",
+  smstome: "SMSToMe",
+};

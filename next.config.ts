@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Native TLS-impersonation client; must not be bundled by Turbopack
+  serverExternalPackages: ["impit"],
 };
 
 export default nextConfig;

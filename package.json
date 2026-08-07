@@ -1,14 +1,35 @@
 {
-  "name": "free-pcode",
+  "name": "free-phone-pcode",
   "version": "0.1.0",
-  "private": true,
+  "description": "Open-source aggregator for publicly displayed temporary SMS inboxes from multiple third-party sites",
+  "license": "MIT",
+  "private": false,
+  "keywords": [
+    "sms",
+    "verification-code",
+    "temporary-phone-number",
+    "aggregator",
+    "nextjs",
+    "receive-sms",
+    "otp"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kivenZhou/free-phone-pcode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kivenZhou/free-phone-pcode/issues"
+  },
+  "homepage": "https://github.com/kivenZhou/free-phone-pcode#readme",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
+    "dev": "next dev",
     "lint": "eslint"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
+    "impit": "^0.14.3",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
