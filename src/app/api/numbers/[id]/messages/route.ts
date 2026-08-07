@@ -17,14 +17,14 @@ export async function GET(
 ) {
   const { id } = await ctx.params;
   const force = req.nextUrl.searchParams.get("force") === "1";
-  const number = getNumberById(id);
+  const number = await getNumberById(id);
 
   if (!number) {
     return NextResponse.json({ error: "Number not found" }, { status: 404 });
   }
 
   if (!force) {
-    const cached = getCachedMessages(id, CACHE_MS);
+    const cached = await getCachedMessages(id, CACHE_MS);
     if (cached) {
       return NextResponse.json({
         number,
@@ -42,7 +42,7 @@ export async function GET(
 
   try {
     const messages = await provider.listMessages(number.e164, number.meta);
-    setCachedMessages(id, messages);
+    await setCachedMessages(id, messages);
     return NextResponse.json({
       number,
       messages,
@@ -50,7 +50,7 @@ export async function GET(
       cached: false,
     });
   } catch (err) {
-    const cached = getCachedMessages(id, 30 * 60_000);
+    const cached = await getCachedMessages(id, 30 * 60_000);
     if (cached) {
       return NextResponse.json({
         number,

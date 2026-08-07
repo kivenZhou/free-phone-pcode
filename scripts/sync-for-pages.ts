@@ -28,7 +28,7 @@ async function prefetchMessages(limit: number) {
     if (!provider) return;
     try {
       const messages = await provider.listMessages(number.e164, number.meta);
-      setCachedMessages(number.id, messages);
+      await setCachedMessages(number.id, messages);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.warn(`Messages failed for ${number.id}: ${message}`);

@@ -63,7 +63,74 @@ npm run build    # 内部为 next build --webpack
 npm start
 ```
 
-推荐 Docker / VPS / Vercel（Node runtime）等支持原生模块的环境。
+推荐 Docker / VPS 等支持原生模块的环境；**完整功能首选 Cloudflare Workers**（见下文）。
+
+### Cloudflare Workers（完整功能，无需自有服务器）
+
+项目已适配 [OpenNext Cloudflare](https://opennext.js.org/cloudflare) 适配器，可在 Cloudflare 上运行与本地相同的 Next.js + API（同步、拉短信、分页、收藏等）。
+
+**数据存储**：生产环境使用 **R2 对象存储**（代替本地 `data/store.json`）；本地 `npm run dev` 仍用文件，无需改习惯。
+
+#### 一次性准备
+
+1. 注册 [Cloudflare](https://dash.cloudflare.com/)，安装 Wrangler 并登录：
+
+```bash
+npx wrangler login
+```
+
+2. 创建 R2 存储桶（名称需与 `wrangler.jsonc` 一致，默认 `free-phone-pcode-data`）：
+
+```bash
+npx wrangler r2 bucket create free-phone-pcode-data
+```
+
+3. 复制环境变量示例：
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+4. 在 Cloudflare 控制台 → Workers → 你的项目 → **Settings → Variables** 添加（生产环境）：
+
+| 变量 | 说明 |
+|------|------|
+| `REFRESH_TOKEN` | 保护 `POST /api/refresh` |
+| `CRON_SECRET` | 保护 `GET /api/cron/refresh` 定时同步 |
+| `DISABLED_PROVIDERS` | 可选，禁用抓不到的来源 |
+
+#### 部署
+
+```bash
+npm install
+npm run deploy:cf
+```
+
+首次部署后，在 Cloudflare 控制台绑定自定义域名（可选）。
+
+#### 定时同步
+
+`wrangler.jsonc` 已配置每 2 小时 Cron。若设置了 `CRON_SECRET`，需在 Cloudflare Cron 触发器或外部定时任务里带上：
+
+```bash
+curl -H "Authorization: Bearer <CRON_SECRET>" https://你的域名/api/cron/refresh
+```
+
+用户访问网站时也会自动检测缓存是否过期并后台同步（与本地类似）。
+
+#### 本地预览 Cloudflare 运行时
+
+```bash
+npm run preview:cf
+```
+
+#### 注意事项
+
+| 项目 | 说明 |
+|------|------|
+| SMS24 / impit | 依赖原生模块，在 Cloudflare 上**可能**不可用；可在环境变量里 `DISABLED_PROVIDERS=sms24` |
+| Worker 体积 | 免费版压缩后约 3MB 上限，若构建失败可考虑 Workers Paid |
+| 同步耗时 | 全量同步可能超过单次请求时间，可多次点击「同步」或依赖 Cron 分批完成 |
 
 ### GitHub Pages（静态演示）
 
@@ -102,6 +169,9 @@ npm run build:pages
 | `SMS24_MAX_PAGES` | `20` | SMS24 每个国家最多抓取页数 |
 | `SMS24_CONCURRENCY` | `10` | SMS24 页面抓取并发 |
 | `REFRESH_TOKEN` | — | 若设置，则 `POST /api/refresh` 需 `Authorization: Bearer <token>` |
+| `CRON_SECRET` | — | 若设置，则 `GET /api/cron/refresh` 需 Bearer 鉴权（Cloudflare 定时任务用） |
+| `STORE_BACKEND` | 自动 | 设为 `file` 可强制本地文件存储（Cloudflare 上自动用 R2） |
+| `DISABLE_BACKGROUND_REFRESH` | — | Cloudflare 上默认开启；本地勿设 |
 
 Provider id 列表见 [数据源](#数据源与商标声明)。
 

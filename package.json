@@ -24,6 +24,8 @@
   "scripts": {
     "build": "next build --webpack",
     "build:pages": "node scripts/build-pages.mjs",
+    "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy:cf": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start",
     "dev": "next dev",
     "lint": "eslint"
@@ -36,6 +38,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.14.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -44,6 +47,7 @@
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.86.0"
   }
 }

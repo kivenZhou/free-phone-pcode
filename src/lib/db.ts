@@ -1,61 +1,12 @@
-import fs from "fs";
-import path from "path";
 import { parsePhone, type LineType } from "./phone";
 import type { NormalizedMessage, NormalizedNumber, ProviderHealth } from "./providers/types";
+import { getStoreBackend, readLocalStoreSync } from "./store-backend";
+import { type StoreShape, type StoredNumber } from "./store-types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "store.json");
-
-export interface StoredNumber extends NormalizedNumber {
-  id: string;
-  updatedAt: number;
-  nationalNumber: string;
-  dialCode: string;
-  countryIso: string;
-  countryNameZh: string;
-  flag: string;
-  lineType: LineType;
-}
-
-interface StoreShape {
-  numbers: StoredNumber[];
-  messages: Record<string, { messages: NormalizedMessage[]; fetchedAt: number }>;
-  health: ProviderHealth[];
-  syncMeta: Record<string, string>;
-}
-
-const emptyStore = (): StoreShape => ({
-  numbers: [],
-  messages: {},
-  health: [],
-  syncMeta: {},
-});
-
-function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-function readStore(): StoreShape {
-  ensureDir();
-  if (!fs.existsSync(DB_PATH)) return emptyStore();
-  try {
-    const raw = fs.readFileSync(DB_PATH, "utf8");
-    const parsed = JSON.parse(raw) as StoreShape;
-    return {
-      numbers: (parsed.numbers ?? []).map(enrichStored),
-      messages: parsed.messages ?? {},
-      health: parsed.health ?? [],
-      syncMeta: parsed.syncMeta ?? {},
-    };
-  } catch {
-    return emptyStore();
-  }
-}
+export type { StoredNumber, StoreShape } from "./store-types";
 
 function enrichStored(
-  n: (StoredNumber | (NormalizedNumber & { id: string; updatedAt: number })),
+  n: StoredNumber | (NormalizedNumber & { id: string; updatedAt: number }),
 ): StoredNumber {
   const parsed = parsePhone({
     e164: n.e164,
@@ -78,17 +29,23 @@ function enrichStored(
   };
 }
 
-function writeStore(store: StoreShape) {
-  ensureDir();
-  const tmp = `${DB_PATH}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(store), "utf8");
-  fs.renameSync(tmp, DB_PATH);
+async function readStore(): Promise<StoreShape> {
+  const backend = await getStoreBackend();
+  const store = await backend.read();
+  return {
+    ...store,
+    numbers: store.numbers.map(enrichStored),
+  };
 }
 
-/** Serialize JSON store writes so parallel provider syncs don't clobber each other. */
+async function writeStore(store: StoreShape): Promise<void> {
+  const backend = await getStoreBackend();
+  await backend.write(store);
+}
+
 let dbWriteChain: Promise<void> = Promise.resolve();
 
-function runDbWrite<T>(fn: () => T): Promise<T> {
+function runDbWrite<T>(fn: () => Promise<T>): Promise<T> {
   const job = dbWriteChain.then(fn);
   dbWriteChain = job.then(
     () => undefined,
@@ -97,24 +54,28 @@ function runDbWrite<T>(fn: () => T): Promise<T> {
   return job;
 }
 
-export function hasStoredNumbers(): boolean {
-  return readStore().numbers.length > 0;
+export async function hasStoredNumbers(): Promise<boolean> {
+  const store = await readStore();
+  return store.numbers.length > 0;
 }
 
-/** Read current store snapshot (build/export scripts). */
+/** 构建脚本读取本地 data/store.json */
 export function readStoreForExport(): StoreShape {
-  return readStore();
+  const store = readLocalStoreSync();
+  return {
+    ...store,
+    numbers: store.numbers.map(enrichStored),
+  };
 }
 
-/** Replace one provider's numbers + health in a single atomic write. */
 export function applyProviderSync(
   providerId: string,
   numbers: NormalizedNumber[],
   health: ProviderHealth,
   makeId: (n: NormalizedNumber) => string,
 ): Promise<void> {
-  return runDbWrite(() => {
-    const store = readStore();
+  return runDbWrite(async () => {
+    const store = await readStore();
     const now = Date.now();
     const kept = store.numbers.filter((n) => n.providerId !== providerId);
     const byId = new Map(kept.map((n) => [n.id, n]));
@@ -151,15 +112,15 @@ export function applyProviderSync(
     const idx = store.health.findIndex((h) => h.id === health.id);
     if (idx >= 0) store.health[idx] = health;
     else store.health.push(health);
-    writeStore(store);
+    await writeStore(store);
   });
 }
 
-export function upsertNumbers(
+export async function upsertNumbers(
   numbers: NormalizedNumber[],
   makeId: (n: NormalizedNumber) => string,
 ) {
-  const store = readStore();
+  const store = await readStore();
   const now = Date.now();
   const byId = new Map(store.numbers.map((n) => [n.id, n]));
 
@@ -192,16 +153,16 @@ export function upsertNumbers(
   }
 
   store.numbers = Array.from(byId.values());
-  writeStore(store);
+  await writeStore(store);
 }
 
-export function listNumbers(filters: {
+export async function listNumbers(filters: {
   country?: string;
   provider?: string;
   q?: string;
   lineType?: string;
-}): StoredNumber[] {
-  let rows = readStore().numbers.map(enrichStored);
+}): Promise<StoredNumber[]> {
+  let rows = (await readStore()).numbers.map(enrichStored);
 
   if (filters.country) {
     rows = rows.filter(
@@ -232,55 +193,61 @@ export function listNumbers(filters: {
   return rows.sort((a, b) => b.lastSeenAt - a.lastSeenAt || a.e164.localeCompare(b.e164));
 }
 
-export function getNumberById(id: string): StoredNumber | null {
-  const n = readStore().numbers.find((x) => x.id === id);
+export async function getNumberById(id: string): Promise<StoredNumber | null> {
+  const n = (await readStore()).numbers.find((x) => x.id === id);
   return n ? enrichStored(n) : null;
 }
 
-export function getCachedMessages(
+export async function getCachedMessages(
   numberId: string,
   maxAgeMs: number,
-): { messages: NormalizedMessage[]; fetchedAt: number } | null {
-  const entry = readStore().messages[numberId];
+): Promise<{ messages: NormalizedMessage[]; fetchedAt: number } | null> {
+  const entry = (await readStore()).messages[numberId];
   if (!entry) return null;
   if (Date.now() - entry.fetchedAt > maxAgeMs) return null;
   return entry;
 }
 
-export function setCachedMessages(numberId: string, messages: NormalizedMessage[]) {
-  const store = readStore();
-  store.messages[numberId] = { messages, fetchedAt: Date.now() };
-  writeStore(store);
+export async function setCachedMessages(numberId: string, messages: NormalizedMessage[]) {
+  return runDbWrite(async () => {
+    const store = await readStore();
+    store.messages[numberId] = { messages, fetchedAt: Date.now() };
+    await writeStore(store);
+  });
 }
 
-export function upsertProviderHealth(health: ProviderHealth) {
-  const store = readStore();
-  const idx = store.health.findIndex((h) => h.id === health.id);
-  if (idx >= 0) store.health[idx] = health;
-  else store.health.push(health);
-  writeStore(store);
+export async function upsertProviderHealth(health: ProviderHealth) {
+  return runDbWrite(async () => {
+    const store = await readStore();
+    const idx = store.health.findIndex((h) => h.id === health.id);
+    if (idx >= 0) store.health[idx] = health;
+    else store.health.push(health);
+    await writeStore(store);
+  });
 }
 
-export function listProviderHealth(): ProviderHealth[] {
-  return [...readStore().health].sort((a, b) => a.name.localeCompare(b.name));
+export async function listProviderHealth(): Promise<ProviderHealth[]> {
+  return [...(await readStore()).health].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function getDistinctCountries(filters?: {
+export async function getDistinctCountries(filters?: {
   provider?: string;
   lineType?: string;
   q?: string;
-}): Array<{
-  name: string;
-  iso: string;
-  flag: string;
-  dialCode: string;
-  count: number;
-}> {
+}): Promise<
+  Array<{
+    name: string;
+    iso: string;
+    flag: string;
+    dialCode: string;
+    count: number;
+  }>
+> {
   const map = new Map<
     string,
     { name: string; iso: string; flag: string; dialCode: string; count: number }
   >();
-  const rows = listNumbers({
+  const rows = await listNumbers({
     provider: filters?.provider,
     lineType: filters?.lineType,
     q: filters?.q,
@@ -304,18 +271,25 @@ export function getDistinctCountries(filters?: {
   );
 }
 
-export function setSyncMeta(key: string, value: string) {
-  const store = readStore();
-  store.syncMeta[key] = value;
-  writeStore(store);
+export async function setSyncMeta(key: string, value: string) {
+  return runDbWrite(async () => {
+    const store = await readStore();
+    store.syncMeta[key] = value;
+    await writeStore(store);
+  });
 }
 
-export function getSyncMeta(key: string): string | null {
-  return readStore().syncMeta[key] ?? null;
+export async function getSyncMeta(key: string): Promise<string | null> {
+  return (await readStore()).syncMeta[key] ?? null;
 }
 
-export function clearProviderNumbers(providerId: string) {
-  const store = readStore();
-  store.numbers = store.numbers.filter((n) => n.providerId !== providerId);
-  writeStore(store);
+export async function clearProviderNumbers(providerId: string) {
+  return runDbWrite(async () => {
+    const store = await readStore();
+    store.numbers = store.numbers.filter((n) => n.providerId !== providerId);
+    await writeStore(store);
+  });
 }
+
+// re-export LineType for callers that imported from db
+export type { LineType };

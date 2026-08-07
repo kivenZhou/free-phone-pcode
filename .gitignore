@@ -41,6 +41,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# OpenNext / Cloudflare build output
+.open-next
+.dev.vars
+
 # local runtime cache (may contain SMS bodies — never commit)
 /data/*
 !/data/.gitkeep

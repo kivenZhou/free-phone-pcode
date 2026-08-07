@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "free-phone-pcode",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "free-phone-pcode"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "DATA_BUCKET",
+      "bucket_name": "free-phone-pcode-data"
+    }
+  ],
+  "vars": {
+    "DISABLE_BACKGROUND_REFRESH": "1"
+  },
+  "triggers": {
+    "crons": ["0 */2 * * *"]
+  }
+}

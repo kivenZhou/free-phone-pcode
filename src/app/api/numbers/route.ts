@@ -26,17 +26,16 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get("q") || undefined;
   const lineType = searchParams.get("lineType") || undefined;
 
-  const countries = getDistinctCountries({ provider, lineType, q });
-  const health = listProviderHealth();
+  const countries = await getDistinctCountries({ provider, lineType, q });
+  const health = await listProviderHealth();
   const providers = listProviderMeta();
-  const lastRefreshAt = Number(getSyncMeta("last_refresh_at") || 0);
+  const lastRefreshAt = Number((await getSyncMeta("last_refresh_at")) || 0);
   const catalogTotal = countries.reduce((sum, c) => sum + c.count, 0);
 
-  // Country browse mode: skip shipping thousands of numbers until a country/search is chosen
   const browseCountries = !country && !q;
   const numbers = browseCountries
     ? []
-    : listNumbers({ country, provider, q, lineType });
+    : await listNumbers({ country, provider, q, lineType });
 
   return NextResponse.json({
     numbers,

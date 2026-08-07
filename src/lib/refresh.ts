@@ -77,8 +77,8 @@ export async function refreshProviders(providerId?: string) {
       if ("failed" in outcome && outcome.failed) failed.push(outcome.failed);
     }
 
-    setSyncMeta("last_refresh_at", String(Date.now()));
-    setSyncMeta(
+    await setSyncMeta("last_refresh_at", String(Date.now()));
+    await setSyncMeta(
       "last_refresh_result",
       JSON.stringify({ ok, failed, at: Date.now() }),
     );
@@ -92,21 +92,23 @@ export async function refreshProviders(providerId?: string) {
   }
 }
 
-/** Stale cache triggers background refresh; empty store blocks until first sync. */
+/** 缓存过期时在后台刷新；空库则阻塞到首次同步完成。 */
 export async function ensureFreshData(maxAgeMs = 10 * 60 * 1000) {
-  const last = Number(getSyncMeta("last_refresh_at") || 0);
+  const last = Number((await getSyncMeta("last_refresh_at")) || 0);
   const stale = !last || Date.now() - last > maxAgeMs;
   if (!stale) return;
 
   const running = refreshProviders();
-  if (!hasStoredNumbers()) {
+  if (!(await hasStoredNumbers())) {
     await running;
     return;
   }
   void running.catch(() => undefined);
 }
 
+/** 本地 Node 常驻进程用；Cloudflare 上请用定时任务调 /api/cron/refresh */
 export function startBackgroundRefresh(intervalMs = 8 * 60 * 1000) {
+  if (process.env.DISABLE_BACKGROUND_REFRESH === "1") return;
   if (intervalStarted || typeof setInterval === "undefined") return;
   intervalStarted = true;
   setTimeout(() => {
