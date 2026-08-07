@@ -65,11 +65,13 @@ npm start
 
 推荐 Docker / VPS 等支持原生模块的环境；**完整功能首选 Cloudflare Workers**（见下文）。
 
-### Cloudflare Workers（完整功能，无需绑卡）
+### Cloudflare Workers（实时 API，无需绑卡）
 
-项目已适配 [OpenNext Cloudflare](https://opennext.js.org/cloudflare)，可在 Cloudflare 上运行与本地相同的 Next.js + API（**实时同步、拉短信、收验证码**）。
+项目已适配 [OpenNext Cloudflare](https://opennext.js.org/cloudflare)，可在 Cloudflare 上运行 Next.js + API（**实时同步、拉短信、收验证码**）。
 
 **数据存储**：生产环境使用 **Workers KV**（代替本地 `data/store.json`）。KV 在 Workers 免费版即可使用，**一般不需要绑信用卡**（R2 才需要绑卡）。
+
+> **与 GitHub 的关系**：Cloudflare Workers **不会**因为 push 到 GitHub 就自动部署。需要在本机执行 `npm run deploy:cf`，或在 Cloudflare 控制台手动「连接到仓库」后才会 CI 部署。这与 **GitHub Pages**（推 `main` 自动更新静态站）是两套独立流程。
 
 #### 一次性准备
 
@@ -93,22 +95,40 @@ npm run setup:cf-kv
 cp .dev.vars.example .dev.vars
 ```
 
-4. 在 Cloudflare 控制台 → Workers → 你的项目 → **Settings → Variables** 添加（生产环境建议设置）：
+4. 在 Cloudflare 控制台 → Workers → `free-phone-pcode` → **Settings → Variables** 添加（生产环境建议设置）：
 
 | 变量 | 说明 |
 |------|------|
+| `SKIP_NATIVE_MODULES` | 设为 `1`（Cloudflare 构建/运行时必须，自动禁用 SMS24） |
 | `REFRESH_TOKEN` | 保护 `POST /api/refresh` |
 | `CRON_SECRET` | 保护 `GET /api/cron/refresh` 定时同步 |
-| `DISABLED_PROVIDERS` | 可选，禁用抓不到的来源 |
+| `DISABLED_PROVIDERS` | 可选，逗号分隔禁用其他来源 |
 
-#### 部署
+#### 方式 A：本机部署（Wrangler CLI）
 
 ```bash
 npm install
 npm run deploy:cf
 ```
 
-首次部署后，在 Cloudflare 控制台绑定自定义域名（可选）。部署完成后点「同步全部来源」，即可像本地一样收短信。
+`deploy:cf` 内部会设置 `SKIP_NATIVE_MODULES=1`，调用 OpenNext 构建并上传 Worker。首次部署后默认地址形如 `https://free-phone-pcode.<你的子域>.workers.dev`（与 GitHub 用户名无关）。
+
+#### 方式 B：关联 GitHub 自动部署（Workers Builds）
+
+在 Cloudflare 控制台 → Workers → `free-phone-pcode` → **Settings → 构建** → **连接到仓库**，选择本仓库 `free-phone-pcode`，分支 `main`。
+
+**务必修改默认构建命令**（不要用 `npm run build` + `npx wrangler deploy`）：
+
+| 字段 | 命令 |
+|------|------|
+| **构建命令** | `SKIP_NATIVE_MODULES=1 npx opennextjs-cloudflare build` |
+| **部署命令** | `npx opennextjs-cloudflare deploy` |
+
+并在 **Variables** 中同样设置 `SKIP_NATIVE_MODULES=1`。关联完成后，推送 `main` 会自动构建部署。
+
+#### 部署后
+
+在 Cloudflare 控制台绑定自定义域名（可选）。部署完成后点「同步全部来源」，即可像本地一样收短信。
 
 #### 定时同步
 
@@ -130,10 +150,11 @@ npm run preview:cf
 
 | 项目 | 说明 |
 |------|------|
-| SMS24 / impit | 依赖原生模块，在 Cloudflare 上**可能**不可用；可设 `DISABLED_PROVIDERS=sms24` |
+| SMS24 / impit | 依赖原生 `.node` 模块，**无法在 Workers 运行**；Cloudflare 构建会自动设 `SKIP_NATIVE_MODULES=1` 跳过 |
+| Node 自托管 | `npm run build && npm start` 可使用完整 SMS24（含 `impit`） |
 | KV 体积 | 单 key 上限约 25MB，号码特别多时需后续拆分存储 |
 | Worker 体积 | 免费版压缩后约 3MB 上限，构建失败可考虑 Workers Paid |
-| GitHub Pages | **仅静态演示，不能收验证码**；完整功能请用 Cloudflare Workers |
+| GitHub Pages | **仅静态演示，不能收验证码**；完整实时功能请用 Cloudflare Workers |
 
 ### GitHub Pages（静态演示，不能收码）
 
@@ -168,6 +189,7 @@ npm run build:pages
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `DISABLED_PROVIDERS` | — | 逗号分隔的 provider id，禁用指定来源 |
+| `SKIP_NATIVE_MODULES` | — | 设为 `1` 时跳过 SMS24（Cloudflare 构建/部署脚本已自动设置） |
 | `REFRESH_CONCURRENCY` | `5` | 同时同步的来源数量 |
 | `SMS24_MAX_PAGES` | `20` | SMS24 每个国家最多抓取页数 |
 | `SMS24_CONCURRENCY` | `10` | SMS24 页面抓取并发 |
@@ -215,7 +237,7 @@ data/               # 运行时缓存（已 gitignore，勿提交）
 | `onlinesim` | OnlineSIM | onlinesim.io 公开 JSON API | 相对稳定 |
 | `freephonenum` | FreePhoneNum | freephonenum.com | HTML |
 | `smscodeonline` | SMSCodeOnline | smscodeonline.com | HTML |
-| `sms24` | SMS24 | sms24.me | HTML + API，Cloudflare，使用 `impit` |
+| `sms24` | SMS24 | sms24.me | HTML + API，Cloudflare 保护；Node 环境用 `impit`，Workers 上自动禁用 |
 | `mianfeisms` | 免费接码 SMS | mianfeisms.xyz | HTML |
 | `goinsms` | GoInSMS | goinsms.xyz | HTML |
 | `yunjiema` | 云接码 | yunjiema.net | HTML |
@@ -265,6 +287,8 @@ data/               # 运行时缓存（已 gitignore，勿提交）
 
 - [ ] 未提交 `data/`、`.env*` 到 Git
 - [ ] 生产环境设置 `REFRESH_TOKEN`（若公网可访问）
+- [ ] Cloudflare 部署使用 `opennextjs-cloudflare`（非裸 `wrangler deploy`），并设置 `SKIP_NATIVE_MODULES=1`
+- [ ] 若关联 GitHub 自动部署，构建/部署命令已按 README「方式 B」配置
 
 ---
 
