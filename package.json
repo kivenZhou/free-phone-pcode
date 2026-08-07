@@ -25,8 +25,8 @@
     "build": "next build --webpack",
     "build:pages": "node scripts/build-pages.mjs",
     "setup:cf-kv": "node scripts/setup-cf-kv.mjs",
-    "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy:cf": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview:cf": "SKIP_NATIVE_MODULES=1 opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy:cf": "SKIP_NATIVE_MODULES=1 opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start",
     "dev": "next dev",
     "lint": "eslint"

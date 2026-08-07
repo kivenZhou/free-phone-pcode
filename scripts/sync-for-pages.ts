@@ -24,7 +24,7 @@ async function prefetchMessages(limit: number) {
   console.log(`Prefetching messages for ${targets.length} numbers…`);
 
   await mapPool(targets, concurrency, async (number) => {
-    const provider = getProvider(number.providerId);
+    const provider = await getProvider(number.providerId);
     if (!provider) return;
     try {
       const messages = await provider.listMessages(number.e164, number.meta);

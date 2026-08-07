@@ -35,7 +35,7 @@ export async function GET(
     }
   }
 
-  const provider = getProvider(number.providerId);
+  const provider = await getProvider(number.providerId);
   if (!provider) {
     return NextResponse.json({ error: "Provider unavailable" }, { status: 503 });
   }

@@ -65,7 +65,9 @@ export async function refreshProviders(providerId?: string) {
 
   refreshPromise = (async () => {
     const targets = (
-      providerId ? [getProvider(providerId)].filter(Boolean) : getProviders()
+      providerId
+        ? [(await getProvider(providerId))].filter(Boolean)
+        : await getProviders()
     ) as SmsProvider[];
 
     const outcomes = await mapPool(targets, REFRESH_CONCURRENCY, syncOneProvider);

@@ -1,21 +1,37 @@
-import { Impit, type HttpMethod } from "impit";
 import { FetchError } from "./http";
+
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
+
+type BrowserFetchClient = {
+  fetch: (
+    url: string,
+    init?: {
+      method?: HttpMethod;
+      headers?: Record<string, string>;
+      body?: string;
+      timeout?: number;
+    },
+  ) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
+};
 
 /**
  * Chrome-impersonated HTTP client (TLS fingerprint) for Cloudflare-protected sites.
- * Shares cookies / connection pool across requests on this process.
+ * Loaded on demand so OpenNext / Workers builds do not trace native `.node` binaries.
  */
-let client: Impit | null = null;
+let clientPromise: Promise<BrowserFetchClient> | null = null;
 
-function getClient(): Impit {
-  if (!client) {
-    client = new Impit({
-      browser: "chrome",
-      timeout: 25_000,
-      followRedirects: true,
-    });
+async function getClient(): Promise<BrowserFetchClient> {
+  if (!clientPromise) {
+    clientPromise = (async () => {
+      const { Impit } = await import("impit");
+      return new Impit({
+        browser: "chrome",
+        timeout: 25_000,
+        followRedirects: true,
+      });
+    })();
   }
-  return client;
+  return clientPromise;
 }
 
 export async function browserFetchText(
@@ -27,7 +43,7 @@ export async function browserFetchText(
     timeoutMs?: number;
   } = {},
 ): Promise<string> {
-  const res = await getClient().fetch(url, {
+  const res = await (await getClient()).fetch(url, {
     method: options.method || "GET",
     headers: {
       Accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
