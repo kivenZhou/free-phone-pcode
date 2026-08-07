@@ -14,10 +14,10 @@
       "service": "free-phone-pcode"
     }
   ],
-  "r2_buckets": [
+  "kv_namespaces": [
     {
-      "binding": "DATA_BUCKET",
-      "bucket_name": "free-phone-pcode-data"
+      "binding": "DATA_KV",
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
     }
   ],
   "vars": {

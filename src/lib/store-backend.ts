@@ -3,14 +3,22 @@ import path from "path";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { emptyStore, STORE_OBJECT_KEY, type StoreShape } from "./store-types";
 
-/** Cloudflare R2 绑定最小类型（避免额外类型包冲突） */
+interface KVNamespaceBinding {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string): Promise<void>;
+}
+
 interface R2Object {
   text(): Promise<string>;
 }
 
 interface R2BucketBinding {
   get(key: string): Promise<R2Object | null>;
-  put(key: string, value: string, options?: { httpMetadata?: { contentType?: string } }): Promise<void>;
+  put(
+    key: string,
+    value: string,
+    options?: { httpMetadata?: { contentType?: string } },
+  ): Promise<void>;
 }
 
 export interface StoreBackend {
@@ -20,6 +28,20 @@ export interface StoreBackend {
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "store.json");
+
+function parseStore(raw: string): StoreShape {
+  try {
+    const parsed = JSON.parse(raw) as StoreShape;
+    return {
+      numbers: parsed.numbers ?? [],
+      messages: parsed.messages ?? {},
+      health: parsed.health ?? [],
+      syncMeta: parsed.syncMeta ?? {},
+    };
+  } catch {
+    return emptyStore();
+  }
+}
 
 function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -32,14 +54,7 @@ class FileStoreBackend implements StoreBackend {
     ensureDir();
     if (!fs.existsSync(DB_PATH)) return emptyStore();
     try {
-      const raw = fs.readFileSync(DB_PATH, "utf8");
-      const parsed = JSON.parse(raw) as StoreShape;
-      return {
-        numbers: parsed.numbers ?? [],
-        messages: parsed.messages ?? {},
-        health: parsed.health ?? [],
-        syncMeta: parsed.syncMeta ?? {},
-      };
+      return parseStore(fs.readFileSync(DB_PATH, "utf8"));
     } catch {
       return emptyStore();
     }
@@ -53,23 +68,27 @@ class FileStoreBackend implements StoreBackend {
   }
 }
 
+class KVStoreBackend implements StoreBackend {
+  constructor(private kv: KVNamespaceBinding) {}
+
+  async read(): Promise<StoreShape> {
+    const raw = await this.kv.get(STORE_OBJECT_KEY);
+    if (!raw) return emptyStore();
+    return parseStore(raw);
+  }
+
+  async write(store: StoreShape): Promise<void> {
+    await this.kv.put(STORE_OBJECT_KEY, JSON.stringify(store));
+  }
+}
+
 class R2StoreBackend implements StoreBackend {
   constructor(private bucket: R2BucketBinding) {}
 
   async read(): Promise<StoreShape> {
     const obj = await this.bucket.get(STORE_OBJECT_KEY);
     if (!obj) return emptyStore();
-    try {
-      const parsed = JSON.parse(await obj.text()) as StoreShape;
-      return {
-        numbers: parsed.numbers ?? [],
-        messages: parsed.messages ?? {},
-        health: parsed.health ?? [],
-        syncMeta: parsed.syncMeta ?? {},
-      };
-    } catch {
-      return emptyStore();
-    }
+    return parseStore(await obj.text());
   }
 
   async write(store: StoreShape): Promise<void> {
@@ -88,9 +107,16 @@ async function resolveBackend(): Promise<StoreBackend> {
 
   try {
     const { env } = await getCloudflareContext({ async: true });
-    const bucket = (env as { DATA_BUCKET?: R2BucketBinding }).DATA_BUCKET;
-    if (bucket) {
-      return new R2StoreBackend(bucket);
+    const cloudflareEnv = env as {
+      DATA_KV?: KVNamespaceBinding;
+      DATA_BUCKET?: R2BucketBinding;
+    };
+
+    if (cloudflareEnv.DATA_KV) {
+      return new KVStoreBackend(cloudflareEnv.DATA_KV);
+    }
+    if (cloudflareEnv.DATA_BUCKET) {
+      return new R2StoreBackend(cloudflareEnv.DATA_BUCKET);
     }
   } catch {
     // 本地 next dev 没有 Cloudflare 绑定，回退到文件
@@ -111,7 +137,7 @@ export function readLocalStoreSync(): StoreShape {
   ensureDir();
   if (!fs.existsSync(DB_PATH)) return emptyStore();
   try {
-    return JSON.parse(fs.readFileSync(DB_PATH, "utf8")) as StoreShape;
+    return parseStore(fs.readFileSync(DB_PATH, "utf8"));
   } catch {
     return emptyStore();
   }

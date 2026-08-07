@@ -1,6 +1,6 @@
 NEXTJS_ENV=development
 
-# 本地 next dev 使用文件存储；Cloudflare 上通过 R2 绑定 DATA_BUCKET
+# 本地 next dev 使用文件存储；Cloudflare 上通过 KV 绑定 DATA_KV
 # STORE_BACKEND=file
 
 # 保护手动同步与定时同步接口（生产环境务必设置）

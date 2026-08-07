@@ -65,11 +65,11 @@ npm start
 
 推荐 Docker / VPS 等支持原生模块的环境；**完整功能首选 Cloudflare Workers**（见下文）。
 
-### Cloudflare Workers（完整功能，无需自有服务器）
+### Cloudflare Workers（完整功能，无需绑卡）
 
-项目已适配 [OpenNext Cloudflare](https://opennext.js.org/cloudflare) 适配器，可在 Cloudflare 上运行与本地相同的 Next.js + API（同步、拉短信、分页、收藏等）。
+项目已适配 [OpenNext Cloudflare](https://opennext.js.org/cloudflare)，可在 Cloudflare 上运行与本地相同的 Next.js + API（**实时同步、拉短信、收验证码**）。
 
-**数据存储**：生产环境使用 **R2 对象存储**（代替本地 `data/store.json`）；本地 `npm run dev` 仍用文件，无需改习惯。
+**数据存储**：生产环境使用 **Workers KV**（代替本地 `data/store.json`）。KV 在 Workers 免费版即可使用，**一般不需要绑信用卡**（R2 才需要绑卡）。
 
 #### 一次性准备
 
@@ -79,19 +79,21 @@ npm start
 npx wrangler login
 ```
 
-2. 创建 R2 存储桶（名称需与 `wrangler.jsonc` 一致，默认 `free-phone-pcode-data`）：
+2. 创建 KV 并自动写入 `wrangler.jsonc`：
 
 ```bash
-npx wrangler r2 bucket create free-phone-pcode-data
+npm run setup:cf-kv
 ```
 
-3. 复制环境变量示例：
+也可在网页创建：**Workers & Pages → KV → Create namespace**，名称随意，然后把 namespace id 填进 `wrangler.jsonc` 的 `DATA_KV.id`。
+
+3. 复制环境变量示例（可选，本地预览 Cloudflare 运行时用）：
 
 ```bash
 cp .dev.vars.example .dev.vars
 ```
 
-4. 在 Cloudflare 控制台 → Workers → 你的项目 → **Settings → Variables** 添加（生产环境）：
+4. 在 Cloudflare 控制台 → Workers → 你的项目 → **Settings → Variables** 添加（生产环境建议设置）：
 
 | 变量 | 说明 |
 |------|------|
@@ -106,7 +108,7 @@ npm install
 npm run deploy:cf
 ```
 
-首次部署后，在 Cloudflare 控制台绑定自定义域名（可选）。
+首次部署后，在 Cloudflare 控制台绑定自定义域名（可选）。部署完成后点「同步全部来源」，即可像本地一样收短信。
 
 #### 定时同步
 
@@ -128,17 +130,18 @@ npm run preview:cf
 
 | 项目 | 说明 |
 |------|------|
-| SMS24 / impit | 依赖原生模块，在 Cloudflare 上**可能**不可用；可在环境变量里 `DISABLED_PROVIDERS=sms24` |
-| Worker 体积 | 免费版压缩后约 3MB 上限，若构建失败可考虑 Workers Paid |
-| 同步耗时 | 全量同步可能超过单次请求时间，可多次点击「同步」或依赖 Cron 分批完成 |
+| SMS24 / impit | 依赖原生模块，在 Cloudflare 上**可能**不可用；可设 `DISABLED_PROVIDERS=sms24` |
+| KV 体积 | 单 key 上限约 25MB，号码特别多时需后续拆分存储 |
+| Worker 体积 | 免费版压缩后约 3MB 上限，构建失败可考虑 Workers Paid |
+| GitHub Pages | **仅静态演示，不能收验证码**；完整功能请用 Cloudflare Workers |
 
-### GitHub Pages（静态演示）
+### GitHub Pages（静态演示，不能收码）
 
 仓库已配置 GitHub Actions，推送 `main` 后会自动部署静态演示站：
 
 **https://kivenzhou.github.io/free-phone-pcode/**
 
-GitHub Pages **只能托管静态文件**，因此演示版与自托管 Node 版有区别：
+GitHub Pages **只能托管静态文件**，**无法实时拉短信或收验证码**（仅构建时快照，绝大多数号码没有短信数据）。
 
 | 能力 | Node 自托管 | GitHub Pages |
 |------|-------------|--------------|
@@ -170,7 +173,7 @@ npm run build:pages
 | `SMS24_CONCURRENCY` | `10` | SMS24 页面抓取并发 |
 | `REFRESH_TOKEN` | — | 若设置，则 `POST /api/refresh` 需 `Authorization: Bearer <token>` |
 | `CRON_SECRET` | — | 若设置，则 `GET /api/cron/refresh` 需 Bearer 鉴权（Cloudflare 定时任务用） |
-| `STORE_BACKEND` | 自动 | 设为 `file` 可强制本地文件存储（Cloudflare 上自动用 R2） |
+| `STORE_BACKEND` | 自动 | 设为 `file` 可强制本地文件存储（Cloudflare 上自动用 KV） |
 | `DISABLE_BACKGROUND_REFRESH` | — | Cloudflare 上默认开启；本地勿设 |
 
 Provider id 列表见 [数据源](#数据源与商标声明)。
