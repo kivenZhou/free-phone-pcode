@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { PROVIDER_LABELS } from "@/lib/provider-labels";
 import { buildNumberDetailHref } from "@/lib/favorites";
 import type { LineType } from "@/lib/phone";
@@ -36,9 +36,12 @@ export function NumberTable({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(20);
 
-  useEffect(() => {
+  const resetKey = `${numbers.length}:${pageSize}`;
+  const [trackedResetKey, setTrackedResetKey] = useState(resetKey);
+  if (trackedResetKey !== resetKey) {
+    setTrackedResetKey(resetKey);
     setPage(1);
-  }, [numbers, pageSize]);
+  }
 
   const totalPages = Math.max(1, Math.ceil(numbers.length / pageSize));
   const safePage = Math.min(page, totalPages);

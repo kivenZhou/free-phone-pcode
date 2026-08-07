@@ -198,7 +198,7 @@ function resolveFromCountryHint(country?: string, countryCode?: string): {
   return null;
 }
 
-export function formatNational(national: string, _dialCode?: string): string {
+export function formatNational(national: string): string {
   return national.replace(/\D/g, "");
 }
 

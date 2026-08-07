@@ -11,7 +11,7 @@ export function PhoneDisplay({
   nationalNumber: string;
   size?: "md" | "lg";
 }) {
-  const national = formatNational(nationalNumber, dialCode);
+  const national = formatNational(nationalNumber);
   const dial = dialCode ? `+${dialCode}` : "";
 
   return (

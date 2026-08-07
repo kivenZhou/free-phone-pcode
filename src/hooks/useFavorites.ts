@@ -10,14 +10,13 @@ import {
 } from "@/lib/favorites";
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<FavoriteNumber[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteNumber[]>(() => getFavorites());
 
   const refresh = useCallback(() => {
     setFavorites(getFavorites());
   }, []);
 
   useEffect(() => {
-    refresh();
     const onChange = () => refresh();
     window.addEventListener(FAVORITES_CHANGED, onChange);
     return () => window.removeEventListener(FAVORITES_CHANGED, onChange);

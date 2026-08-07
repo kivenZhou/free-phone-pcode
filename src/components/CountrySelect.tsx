@@ -51,12 +51,6 @@ export function CountrySelect({
   }, [countries, query]);
 
   useEffect(() => {
-    if (!open) {
-      setQuery(selected ? `${selected.flag} ${selected.name}` : "");
-    }
-  }, [open, selected]);
-
-  useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!rootRef.current?.contains(e.target as Node)) {
         setOpen(false);

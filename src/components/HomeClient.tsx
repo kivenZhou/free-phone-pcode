@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CountryOption } from "./CountrySelect";
@@ -39,7 +38,6 @@ export function HomeClient() {
 
   const [provider, setProvider] = useState("");
   const [lineType, setLineType] = useState("");
-  const [qInput, setQInput] = useState(q);
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,10 +45,6 @@ export function HomeClient() {
   const { favorites } = useFavorites();
 
   const browseCountries = !showFavorites && !country && !q.trim();
-
-  useEffect(() => {
-    setQInput(q);
-  }, [q]);
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
@@ -109,7 +103,6 @@ export function HomeClient() {
   }
 
   function onQueryChange(value: string) {
-    setQInput(value);
     if (value.trim()) {
       navigate({ q: value });
     } else if (country) {
@@ -180,7 +173,7 @@ export function HomeClient() {
           providers={data?.providers ?? []}
           provider={provider}
           lineType={lineType}
-          q={qInput}
+          q={q}
           onProviderChange={setProvider}
           onLineTypeChange={setLineType}
           onQueryChange={onQueryChange}
