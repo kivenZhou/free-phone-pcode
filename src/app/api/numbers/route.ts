@@ -45,6 +45,6 @@ export async function GET(req: NextRequest) {
     lastRefreshAt,
     total: browseCountries ? catalogTotal : numbers.length,
     view: browseCountries ? "countries" : "numbers",
-    syncing: isRefreshRunning(),
+    syncing: await isRefreshRunning(),
   });
 }

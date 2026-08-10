@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { refreshProviders } from "@/lib/refresh";
+import {
+  isRefreshRunning,
+  refreshProviders,
+  startRefreshInBackground,
+} from "@/lib/refresh";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +17,16 @@ export async function GET(req: NextRequest) {
     if (token !== secret) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+  }
+
+  // Cron on Workers: kick off and return quickly so the trigger isn't cancelled.
+  if (process.env.DISABLE_BACKGROUND_REFRESH === "1") {
+    const status = await startRefreshInBackground();
+    return NextResponse.json({ triggered: true, ...status });
+  }
+
+  if (await isRefreshRunning()) {
+    return NextResponse.json({ triggered: false, syncing: true, alreadyRunning: true });
   }
 
   const result = await refreshProviders();

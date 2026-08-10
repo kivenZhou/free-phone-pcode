@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { refreshProviders } from "@/lib/refresh";
+import {
+  isRefreshRunning,
+  refreshProviders,
+  startRefreshInBackground,
+} from "@/lib/refresh";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +26,16 @@ export async function POST(req: NextRequest) {
     // empty body is fine
   }
 
+  // Cloudflare / serverless: return immediately; sync continues via waitUntil.
+  if (process.env.DISABLE_BACKGROUND_REFRESH === "1") {
+    const status = await startRefreshInBackground(provider);
+    return NextResponse.json(status);
+  }
+
+  if (await isRefreshRunning()) {
+    return NextResponse.json({ started: false, syncing: true, alreadyRunning: true });
+  }
+
   const result = await refreshProviders(provider);
-  return NextResponse.json(result);
+  return NextResponse.json({ started: true, syncing: false, ...result });
 }

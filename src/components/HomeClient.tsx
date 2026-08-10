@@ -44,12 +44,12 @@ export function HomeClient() {
     return p.toString();
   }, [country, provider, lineType, q]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { quiet?: boolean }) => {
     if (showFavorites) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!opts?.quiet) setLoading(true);
     setError(null);
     try {
       const json = await fetchNumbersCatalog(queryString);
@@ -57,7 +57,7 @@ export function HomeClient() {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (!opts?.quiet) setLoading(false);
     }
   }, [queryString, showFavorites]);
 
@@ -68,8 +68,8 @@ export function HomeClient() {
   useEffect(() => {
     if (!data?.syncing) return;
     const timer = setInterval(() => {
-      void load();
-    }, 2500);
+      void load({ quiet: true });
+    }, 4000);
     return () => clearInterval(timer);
   }, [data?.syncing, load]);
 
@@ -102,9 +102,18 @@ export function HomeClient() {
   async function onRefresh() {
     if (isStaticExport()) return;
     setRefreshing(true);
+    setError(null);
     try {
-      await triggerRefresh();
-      await load();
+      const result = await triggerRefresh();
+      // Mark syncing immediately so the quiet poll loop starts even before next load.
+      setData((prev) =>
+        prev
+          ? { ...prev, syncing: result.syncing ?? true }
+          : prev,
+      );
+      await load({ quiet: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setRefreshing(false);
     }

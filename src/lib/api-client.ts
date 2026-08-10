@@ -144,7 +144,18 @@ export async function fetchNumberMessages(
   };
 }
 
-export async function triggerRefresh(): Promise<void> {
-  if (isStaticExport()) return;
-  await fetch(`${basePath()}/api/refresh`, { method: "POST" });
+export async function triggerRefresh(): Promise<{
+  started?: boolean;
+  syncing?: boolean;
+}> {
+  if (isStaticExport()) return {};
+  const res = await fetch(`${basePath()}/api/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!res.ok) {
+    throw new Error(`同步请求失败 (${res.status})`);
+  }
+  return (await res.json()) as { started?: boolean; syncing?: boolean };
 }
