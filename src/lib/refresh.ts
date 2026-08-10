@@ -4,6 +4,7 @@ import {
   getSyncMeta,
   hasStoredNumbers,
   setSyncMeta,
+  upsertProviderHealth,
 } from "./db";
 import { encodeNumberId, mapPool } from "./http";
 import { getProvider, getProviders } from "./providers/registry";
@@ -66,34 +67,39 @@ export async function isRefreshRunning(): Promise<boolean> {
 async function syncOneProvider(provider: SmsProvider) {
   try {
     const numbers = await provider.listNumbers();
+    // Keep existing numbers when a scrape returns empty (common on Workers:
+    // blocked pages / subrequest limits). Only replace on a non-empty result.
+    if (!numbers.length) {
+      await upsertProviderHealth({
+        id: provider.id,
+        name: provider.name,
+        status: "degraded",
+        lastError: "Returned zero numbers (kept previous data)",
+      });
+      return { failed: { id: provider.id, error: "Returned zero numbers" } };
+    }
+
     await applyProviderSync(
       provider.id,
       numbers,
       {
         id: provider.id,
         name: provider.name,
-        status: numbers.length ? "ok" : "degraded",
+        status: "ok",
         lastSuccessAt: Date.now(),
         numberCount: numbers.length,
-        lastError: numbers.length ? undefined : "Returned zero numbers",
       },
       (n) => encodeNumberId(n.providerId, n.e164),
     );
     return { ok: provider.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await applyProviderSync(
-      provider.id,
-      [],
-      {
-        id: provider.id,
-        name: provider.name,
-        status: "degraded",
-        lastError: message,
-        numberCount: 0,
-      },
-      (n) => encodeNumberId(n.providerId, n.e164),
-    );
+    await upsertProviderHealth({
+      id: provider.id,
+      name: provider.name,
+      status: "degraded",
+      lastError: message,
+    });
     return { failed: { id: provider.id, error: message } };
   }
 }
