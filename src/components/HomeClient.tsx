@@ -6,6 +6,7 @@ import { CountryGrid } from "./CountryGrid";
 import { Disclaimer } from "./Disclaimer";
 import { FavoritesList } from "./FavoritesList";
 import { Filters } from "./Filters";
+import { GitHubIcon } from "./GitHubIcon";
 import { NumberTable } from "./NumberTable";
 import { StaticDemoBanner } from "./StaticDemoBanner";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -14,7 +15,7 @@ import {
   triggerRefresh,
   type NumbersCatalogResponse,
 } from "@/lib/api-client";
-import { isStaticExport } from "@/lib/site";
+import { isStaticExport, REPO_URL } from "@/lib/site";
 
 export function HomeClient() {
   const router = useRouter();
@@ -152,6 +153,15 @@ export function HomeClient() {
               </span>
             ) : null}
           </button>
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-white/75 px-4 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            <GitHubIcon className="text-base" />
+            GitHub
+          </a>
         </div>
         <h1 className="font-display max-w-4xl text-5xl font-extrabold leading-[1.1] tracking-tight text-[var(--ink)] sm:text-6xl lg:text-7xl">
           Free PCode

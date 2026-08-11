@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Syne } from "next/font/google";
+import { GitHubIcon } from "@/components/GitHubIcon";
+import { REPO_URL } from "@/lib/site";
 import "./globals.css";
 
 const body = Manrope({
@@ -34,6 +36,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             w3h5 接码汇总
           </a>
           ）· 非本站自有号码 · 仅供测试
+          <span className="mx-2 text-[var(--line)]" aria-hidden>
+            ·
+          </span>
+          <a
+            className="inline-flex items-center gap-1 underline decoration-[var(--accent)]/40 underline-offset-2 hover:text-[var(--accent)]"
+            href={REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <GitHubIcon className="text-[0.95em]" />
+            GitHub
+          </a>
         </footer>
       </body>
     </html>

@@ -20,7 +20,7 @@
   "bugs": {
     "url": "https://github.com/kivenZhou/free-phone-pcode/issues"
   },
-  "homepage": "https://kivenzhou.github.io/free-phone-pcode/",
+  "homepage": "https://phone.fastx.ink/",
   "scripts": {
     "build": "next build --webpack",
     "build:pages": "node scripts/build-pages.mjs",

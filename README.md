@@ -4,6 +4,9 @@
 
 **免费公开接码聚合站** — 汇总多家第三方平台上**已公开展示**的临时号码与短信收件箱，提供国家筛选、收藏、分页、验证码高亮等功能。
 
+- **正式站（实时）**：[https://phone.fastx.ink/](https://phone.fastx.ink/)
+- **静态演示（GitHub Pages）**：[https://kivenzhou.github.io/free-phone-pcode/](https://kivenzhou.github.io/free-phone-pcode/)
+
 > ⚠️ **Disclaimer** · 本项目为开源聚合工具，**不拥有任何号码**，**与 listed 平台无官方关系**。请勿用于敏感账号验证或违法用途。详见 [DISCLAIMER.md](./DISCLAIMER.md)。
 
 English summary: an open-source **aggregator** that reads **publicly displayed** temporary SMS inboxes from multiple third-party websites. You deploy at your own risk and must comply with upstream ToS and local laws.
@@ -25,7 +28,15 @@ English summary: an open-source **aggregator** that reads **publicly displayed**
 
 ## 截图
 
-> 部署后可自行补充 `docs/screenshot-home.png` 等截图到 README。
+首页按国家浏览号码：
+
+![首页 · 按国家浏览](./docs/screenshot-home.png)
+
+号码详情页查看公开短信与验证码：
+
+![收件箱 · 验证码高亮](./docs/screenshot-inbox.png)
+
+> **提示**：正式站 / GitHub Pages 受 Workers 免费额度与运行时限制，部分来源（如依赖原生模块的 SMS24）会被跳过或抓不全。**本机 `npm run dev` / `npm start` 可启用完整来源与更高并发，通常能同步到更多手机号。**
 
 ---
 
@@ -53,6 +64,8 @@ npm run dev
 ```bash
 curl -X POST http://localhost:3000/api/refresh
 ```
+
+> 本地 Node 环境可使用完整 provider（含 SMS24 / `impit`）与更高并发，**通常比线上正式站同步到更多手机号**。
 
 ### 生产部署
 
@@ -157,11 +170,16 @@ npm run preview:cf
 | Worker 体积 | 免费版压缩后约 3MB 上限，构建失败可考虑 Workers Paid |
 | GitHub Pages | **仅静态演示，不能收验证码**；完整实时功能请用 Cloudflare Workers |
 
+### 在线地址
+
+| 站点 | 地址 | 说明 |
+|------|------|------|
+| 正式站 | [https://phone.fastx.ink/](https://phone.fastx.ink/) | Cloudflare Workers，可实时拉短信 |
+| 静态演示 | [https://kivenzhou.github.io/free-phone-pcode/](https://kivenzhou.github.io/free-phone-pcode/) | GitHub Pages，仅构建快照 |
+
 ### GitHub Pages（静态演示，不能收码）
 
-仓库已配置 GitHub Actions，推送 `main` 后会自动部署静态演示站：
-
-**https://kivenzhou.github.io/free-phone-pcode/**
+仓库已配置 GitHub Actions，推送 `main` 后会自动部署静态演示站。
 
 GitHub Pages **只能托管静态文件**，**无法实时拉短信或收验证码**（仅构建时快照，绝大多数号码没有短信数据）。
 
