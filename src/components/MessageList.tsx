@@ -52,7 +52,11 @@ export function MessageList({ messages }: { messages: MessageItem[] }) {
   return (
     <ul className="space-y-4">
       {messages.map((m, i) => (
-        <li key={`${m.receivedAt}-${i}`} className="glass-panel rounded-2xl px-6 py-5">
+        <li
+          key={`${m.receivedAt}-${i}`}
+          className="msg-flash glass-panel rounded-2xl px-6 py-5 animate-rise"
+          style={{ animationDelay: `${Math.min(i, 8) * 0.04}s` }}
+        >
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <span className="text-base font-semibold text-[var(--ink)]">
               {m.from || "未知发件人"}

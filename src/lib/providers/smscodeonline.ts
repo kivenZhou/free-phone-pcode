@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { extractOtp } from "../otp";
-import { fetchText, normalizeE164, sleep } from "../http";
+import { fetchText, normalizeE164, parseRelativeTime, sleep } from "../http";
 import type { NormalizedMessage, NormalizedNumber, SmsProvider } from "./types";
 
 const BASE = "https://smscodeonline.com";
@@ -87,11 +87,9 @@ export const smscodeonlineProvider: SmsProvider = {
       messages.push({
         from,
         text,
-        receivedAt: Date.now(),
+        receivedAt: parseRelativeTime(timeText),
         otp: extractOtp(text),
       });
-
-      void timeText;
     });
 
     await sleep(50);

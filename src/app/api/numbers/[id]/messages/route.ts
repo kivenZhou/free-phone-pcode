@@ -10,34 +10,46 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CACHE_MS = 8_000;
+/** force=1 最短重新抓取间隔，防止高频轮询打穿上游 */
+const FORCE_COOLDOWN_MS = 10_000;
 
 export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const force = req.nextUrl.searchParams.get("force") === "1";
+  const forceParam = req.nextUrl.searchParams.get("force") === "1";
   const number = await getNumberById(id);
 
   if (!number) {
     return NextResponse.json({ error: "Number not found" }, { status: 404 });
   }
 
-  if (!force) {
-    const cached = await getCachedMessages(id, CACHE_MS);
-    if (cached) {
-      return NextResponse.json({
-        number,
-        messages: cached.messages,
-        fetchedAt: cached.fetchedAt,
-        cached: true,
-      });
-    }
+  // 即使客户端传 force=1，若缓存仍在冷却窗口内也直接返回缓存，
+  // 避免高频自动刷新每次都打到上游导致 502。
+  const cached = await getCachedMessages(id, forceParam ? FORCE_COOLDOWN_MS : CACHE_MS);
+  if (cached) {
+    return NextResponse.json({
+      number,
+      messages: cached.messages,
+      fetchedAt: cached.fetchedAt,
+      cached: true,
+    });
   }
 
   const provider = await getProvider(number.providerId);
   if (!provider) {
     return NextResponse.json({ error: "Provider unavailable" }, { status: 503 });
+  }
+
+  if (provider.supportsMessages === false) {
+    return NextResponse.json({
+      number,
+      messages: [],
+      fetchedAt: Date.now(),
+      cached: false,
+      warning: `${provider.name} 来源受反爬保护，暂不支持实时拉取短信。`,
+    });
   }
 
   try {
@@ -57,7 +69,7 @@ export async function GET(
         messages: cached.messages,
         fetchedAt: cached.fetchedAt,
         cached: true,
-        warning: err instanceof Error ? err.message : String(err),
+        warning: `上游暂时异常，显示缓存短信：${err instanceof Error ? err.message : String(err)}`,
       });
     }
     return NextResponse.json(

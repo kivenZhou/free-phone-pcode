@@ -29,9 +29,11 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 export function NumberTable({
   numbers,
   linkContext,
+  noMessagesProviders = new Set(),
 }: {
   numbers: NumberRow[];
   linkContext?: { country?: string; q?: string };
+  noMessagesProviders?: Set<string>;
 }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(20);
@@ -96,6 +98,8 @@ export function NumberTable({
             q: linkContext?.q,
           });
 
+          const canReceive = !noMessagesProviders.has(n.providerId);
+
           return (
             <article
               key={n.id}
@@ -122,6 +126,13 @@ export function NumberTable({
                 </div>
               </div>
 
+              {!canReceive && (
+                <p className="mb-3 flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                  <span aria-hidden>⚠️</span>
+                  来源受反爬保护，无法实时收短信
+                </p>
+              )}
+
               <PhoneDisplay dialCode={dial} nationalNumber={national} />
 
               <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -129,13 +140,23 @@ export function NumberTable({
                 {dial && national ? (
                   <CopyButton value={national} label="复制号码" />
                 ) : null}
-                <Link
-                  href={detailHref}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-2)]"
-                >
-                  <span aria-hidden>💬</span>
-                  查看短信
-                </Link>
+                {canReceive ? (
+                  <Link
+                    href={detailHref}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-2)]"
+                  >
+                    <span aria-hidden>💬</span>
+                    查看短信
+                  </Link>
+                ) : (
+                  <span
+                    title="该来源受反爬保护，无法实时拉取短信"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-black/5 px-3 py-1.5 text-sm font-semibold text-[var(--muted)] cursor-not-allowed select-none"
+                  >
+                    <span aria-hidden>🚫</span>
+                    不支持收短信
+                  </span>
+                )}
               </div>
             </article>
           );

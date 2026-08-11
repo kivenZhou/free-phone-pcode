@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { extractOtp } from "../otp";
-import { fetchText, normalizeE164, sleep } from "../http";
+import { fetchText, normalizeE164, parseRelativeTime, sleep } from "../http";
 import type { NormalizedMessage, NormalizedNumber, SmsProvider } from "./types";
 
 const BASE = "https://www.yunduanxin.xyz";
@@ -73,8 +73,11 @@ export const yunduanxinProvider: SmsProvider = {
     const $ = cheerio.load(html);
     const messages: NormalizedMessage[] = [];
 
+    const now = Date.now();
     $(".panel").each((_, el) => {
       const heading = $(el).find(".panel-heading");
+      // badge contains relative time, last span contains the from number
+      const timeText = heading.find(".badge").text().trim();
       const from = heading.find("span").last().text().trim() || "Unknown";
       const text = $(el).find(".panel-body").text().replace(/\s+/g, " ").trim();
       if (!text || text.length < 4) return;
@@ -83,7 +86,7 @@ export const yunduanxinProvider: SmsProvider = {
       messages.push({
         from,
         text,
-        receivedAt: Date.now(),
+        receivedAt: parseRelativeTime(timeText, now),
         otp: extractOtp(text),
       });
     });

@@ -18,6 +18,7 @@ interface ProviderMeta {
   id: string;
   name: string;
   enabled: boolean;
+  supportsMessages: boolean;
 }
 
 interface StaticStore {

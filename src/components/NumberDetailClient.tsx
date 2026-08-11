@@ -38,6 +38,8 @@ export function NumberDetailClient({ id }: { id: string }) {
   const [number, setNumber] = useState<NumberInfo | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [refreshCount, setRefreshCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(() => !isStaticExport());
@@ -45,6 +47,7 @@ export function NumberDetailClient({ id }: { id: string }) {
   const load = useCallback(
     async (force = false) => {
       setError(null);
+      setScanning(true);
       try {
         const json = await fetchNumberMessages(id, force);
         if (json.error && !json.messages) {
@@ -53,14 +56,26 @@ export function NumberDetailClient({ id }: { id: string }) {
         setNumber(json.number);
         setMessages(json.messages || []);
         setWarning(json.warning || null);
+        setRefreshCount((c) => c + 1);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
+        setScanning(false);
       }
     },
     [id],
   );
+
+  // 进度条：给 body 挂 / 摘 refresh-scanning class
+  useEffect(() => {
+    if (scanning) {
+      document.body.classList.add("refresh-scanning");
+    } else {
+      document.body.classList.remove("refresh-scanning");
+    }
+    return () => document.body.classList.remove("refresh-scanning");
+  }, [scanning]);
 
   useEffect(() => {
     void load(true);
@@ -69,8 +84,8 @@ export function NumberDetailClient({ id }: { id: string }) {
   useEffect(() => {
     if (!autoRefresh) return;
     const timer = setInterval(() => {
-      void load(true);
-    }, 5000);
+      void load(false);
+    }, 15_000);
     return () => clearInterval(timer);
   }, [autoRefresh, load]);
 
@@ -174,12 +189,11 @@ export function NumberDetailClient({ id }: { id: string }) {
               onChange={(e) => setAutoRefresh(e.target.checked)}
               className="cursor-pointer"
             />
-            自动刷新（约 5 秒）
+            自动刷新（约 15 秒）
           </label>
         </div>
         <div className="rounded-2xl border border-[var(--line)] bg-white/70 px-5 py-4 text-sm leading-relaxed text-[var(--muted)]">
-          提示：平台显示「已发送验证码」不等于本站收件箱一定能收到。公开共享号常被拦截、延迟或短信根本没进该上游线路。建议开着自动刷新 1–2
-          分钟；仍没有就换另一个号码/来源重试。
+          提示：平台显示「已发送验证码」不等于本站收件箱一定能收到。公开共享号常被拦截、延迟或短信根本没进该上游线路。建议开着自动刷新等待 2–3 分钟；仍没有就换另一个号码/来源重试。
         </div>
         <Disclaimer />
       </header>
@@ -191,14 +205,21 @@ export function NumberDetailClient({ id }: { id: string }) {
       ) : null}
       {warning ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          上游暂时异常，显示缓存短信：{warning}
+          {warning}
         </div>
       ) : null}
+
+      {!loading && refreshCount > 0 && (
+        <p className="text-xs text-[var(--muted)]">
+          最后刷新：{new Date().toLocaleTimeString("zh-CN")}
+          {scanning && <span className="ml-2 animate-pulse">刷新中…</span>}
+        </p>
+      )}
 
       {loading ? (
         <p className="text-base text-[var(--muted)]">正在拉取短信…</p>
       ) : (
-        <MessageList messages={messages} />
+        <MessageList key={refreshCount} messages={messages} />
       )}
     </div>
   );

@@ -95,6 +95,33 @@ button:disabled,
   }
 }
 
+@keyframes scan-bar {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+@keyframes flash-in {
+  0%   { background-color: rgba(10, 138, 150, 0.12); }
+  100% { background-color: transparent; }
+}
+
+.refresh-scanning::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+  animation: scan-bar 0.9s ease-in-out;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.msg-flash {
+  animation: flash-in 0.8s ease-out both;
+}
+
 @keyframes pulse-dot {
   0%,
   100% {

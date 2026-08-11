@@ -14,7 +14,7 @@ export function MessageTime({ at }: { at: number }) {
     return () => clearInterval(id);
   }, [at]);
 
-  if (!at) return null;
+  if (!at) return <span className="text-sm text-[var(--muted)]">时间不详</span>;
   return (
     <time dateTime={new Date(at).toISOString()} className="text-sm text-[var(--muted)]">
       {formatMessageTime(at, now)}

@@ -1,13 +1,15 @@
 "use client";
 
 export interface FiltersProps {
-  providers: Array<{ id: string; name: string; enabled: boolean }>;
+  providers: Array<{ id: string; name: string; enabled: boolean; supportsMessages?: boolean }>;
   provider: string;
   lineType: string;
   q: string;
+  hideNoMessages: boolean;
   onProviderChange: (v: string) => void;
   onLineTypeChange: (v: string) => void;
   onQueryChange: (v: string) => void;
+  onHideNoMessagesChange: (v: boolean) => void;
   onRefresh: () => void;
   refreshing: boolean;
   showRefresh?: boolean;
@@ -18,13 +20,17 @@ export function Filters({
   provider,
   lineType,
   q,
+  hideNoMessages,
   onProviderChange,
   onLineTypeChange,
   onQueryChange,
+  onHideNoMessagesChange,
   onRefresh,
   refreshing,
   showRefresh = true,
 }: FiltersProps) {
+  const hasNoMessageProviders = providers.some((p) => p.supportsMessages === false);
+
   return (
     <div className="glass-panel relative z-50 overflow-visible rounded-2xl p-5 lg:p-6">
       <div className="relative z-50 flex flex-col gap-4 overflow-visible lg:flex-row lg:items-end lg:gap-5">
@@ -40,6 +46,7 @@ export function Filters({
               <option key={p.id} value={p.id}>
                 {p.name}
                 {!p.enabled ? "（已禁用）" : ""}
+                {p.supportsMessages === false ? "（不支持收短信）" : ""}
               </option>
             ))}
           </select>
@@ -80,6 +87,25 @@ export function Filters({
           </button>
         ) : null}
       </div>
+
+      {hasNoMessageProviders && (
+        <div className="mt-4 border-t border-[var(--line)] pt-4">
+          <label className="inline-flex cursor-pointer items-center gap-2.5 text-sm text-[var(--muted)]">
+            <input
+              type="checkbox"
+              checked={hideNoMessages}
+              onChange={(e) => onHideNoMessagesChange(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span>
+              隐藏不支持收短信的号码
+              <span className="ml-1.5 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
+                推荐
+              </span>
+            </span>
+          </label>
+        </div>
+      )}
     </div>
   );
 }

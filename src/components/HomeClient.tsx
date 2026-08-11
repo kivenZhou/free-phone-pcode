@@ -28,6 +28,7 @@ export function HomeClient() {
 
   const [provider, setProvider] = useState("");
   const [lineType, setLineType] = useState("");
+  const [hideNoMessages, setHideNoMessages] = useState(true);
   const [data, setData] = useState<NumbersCatalogResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -128,6 +129,22 @@ export function HomeClient() {
     [data?.countries, country],
   );
 
+  const noMessagesProviders = useMemo(
+    () =>
+      new Set(
+        (data?.providers ?? [])
+          .filter((p) => p.supportsMessages === false)
+          .map((p) => p.id),
+      ),
+    [data?.providers],
+  );
+
+  const visibleNumbers = useMemo(() => {
+    const nums = data?.numbers ?? [];
+    if (!hideNoMessages) return nums;
+    return nums.filter((n) => !noMessagesProviders.has(n.providerId));
+  }, [data?.numbers, hideNoMessages, noMessagesProviders]);
+
   return (
     <div className="page-shell flex flex-col gap-8 lg:gap-10">
       <header className="animate-rise space-y-5">
@@ -182,9 +199,11 @@ export function HomeClient() {
           provider={provider}
           lineType={lineType}
           q={q}
+          hideNoMessages={hideNoMessages}
           onProviderChange={setProvider}
           onLineTypeChange={setLineType}
           onQueryChange={onQueryChange}
+          onHideNoMessagesChange={setHideNoMessages}
           onRefresh={onRefresh}
           refreshing={refreshing}
           showRefresh={!isStaticExport()}
@@ -292,8 +311,9 @@ export function HomeClient() {
         <CountryGrid countries={data?.countries ?? []} onSelect={onCountrySelect} />
       ) : (
         <NumberTable
-          numbers={data?.numbers ?? []}
+          numbers={visibleNumbers}
           linkContext={{ country: country || undefined, q: q || undefined }}
+          noMessagesProviders={noMessagesProviders}
         />
       )}
     </div>

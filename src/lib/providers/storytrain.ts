@@ -81,7 +81,7 @@ export const storytrainProvider: SmsProvider = {
       messages.push({
         from: "Unknown",
         text,
-        receivedAt: Date.now(),
+        receivedAt: 0, // storytrain does not expose message timestamps
         otp: extractOtp(text),
       });
     });
@@ -95,7 +95,7 @@ export const storytrainProvider: SmsProvider = {
         messages.push({
           from: "Unknown",
           text,
-          receivedAt: Date.now(),
+          receivedAt: 0,
           otp: extractOtp(text),
         });
       });

@@ -110,7 +110,7 @@ export const anonymsmsProvider: SmsProvider = {
       messages.push({
         from: $(el).find(".sms-group__from, .from, strong").first().text().trim() || "Unknown",
         text,
-        receivedAt: Date.now(),
+        receivedAt: 0, // anonymsms does not expose message timestamps
         otp: extractOtp(text),
       });
     });
@@ -124,7 +124,7 @@ export const anonymsmsProvider: SmsProvider = {
         messages.push({
           from: "Unknown",
           text,
-          receivedAt: Date.now(),
+          receivedAt: 0,
           otp: extractOtp(text),
         });
       });

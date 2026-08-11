@@ -91,6 +91,53 @@ export function normalizeE164(raw: string): string {
   return `+${digits.replace(/\D/g, "")}`;
 }
 
+/**
+ * Parse relative time strings from provider message pages into a timestamp.
+ * Handles both Chinese ("2分钟前", "3小时前", "8月前") and English
+ * ("2 minutes ago", "3 hours ago", "6 months ago", "2 days ago").
+ * Returns `now` when no match is found.
+ */
+export function parseRelativeTime(text: string, now = Date.now()): number {
+  if (!text) return now;
+  const t = text.toLowerCase().trim();
+
+  // Chinese patterns
+  const zhPatterns: Array<[RegExp, number]> = [
+    [/(\d+)\s*秒前/, 1_000],
+    [/(\d+)\s*分钟前/, 60_000],
+    [/(\d+)\s*小时前/, 3_600_000],
+    [/(\d+)\s*天前/, 86_400_000],
+    [/(\d+)\s*周前/, 7 * 86_400_000],
+    [/(\d+)\s*个?月前/, 30 * 86_400_000],
+    [/(\d+)\s*年前/, 365 * 86_400_000],
+  ];
+  for (const [re, ms] of zhPatterns) {
+    const m = t.match(re);
+    if (m) return now - parseInt(m[1], 10) * ms;
+  }
+
+  // English patterns
+  const enPatterns: Array<[RegExp, number]> = [
+    [/(\d+)\s*second/, 1_000],
+    [/(\d+)\s*min/, 60_000],
+    [/(\d+)\s*hour/, 3_600_000],
+    [/(\d+)\s*day/, 86_400_000],
+    [/(\d+)\s*week/, 7 * 86_400_000],
+    [/(\d+)\s*month/, 30 * 86_400_000],
+    [/(\d+)\s*year/, 365 * 86_400_000],
+    [/just now|刚刚/, 0],
+  ];
+  for (const [re, ms] of enPatterns) {
+    const m = t.match(re);
+    if (m) {
+      const n = m[1] ? parseInt(m[1], 10) : 0;
+      return now - n * ms;
+    }
+  }
+
+  return now;
+}
+
 export function encodeNumberId(providerId: string, e164: string): string {
   return Buffer.from(`${providerId}|${e164}`, "utf8").toString("base64url");
 }

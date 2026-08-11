@@ -5,6 +5,23 @@ import type { NormalizedMessage, NormalizedNumber, SmsProvider } from "./types";
 
 const BASE = "https://www.zsrq.net";
 
+/** 把 zsrq 页面上的相对时间（"2 分钟前"/"1 小时前"/"3 天前"）转成时间戳 */
+function parseRelativeTime(text: string, now: number): number {
+  if (!text) return now;
+  const m =
+    text.match(/(\d+)\s*秒前/) ||
+    text.match(/(\d+)\s*分钟前/) ||
+    text.match(/(\d+)\s*小时前/) ||
+    text.match(/(\d+)\s*天前/);
+  if (!m) return now;
+  const n = parseInt(m[1], 10);
+  if (text.includes("秒")) return now - n * 1000;
+  if (text.includes("分")) return now - n * 60 * 1000;
+  if (text.includes("小时")) return now - n * 60 * 60 * 1000;
+  if (text.includes("天")) return now - n * 24 * 60 * 60 * 1000;
+  return now;
+}
+
 export const zsrqProvider: SmsProvider = {
   id: "zsrq",
   name: "云短信 ZSRQ",
@@ -64,10 +81,10 @@ export const zsrqProvider: SmsProvider = {
     const html = await fetchText(url);
     const $ = cheerio.load(html);
     const messages: NormalizedMessage[] = [];
+    const now = Date.now();
 
     $(".sms-item, .sms-list li, .sms-content").each((_, el) => {
       const root = $(el);
-      // if this is sms-content alone, skip parent duplication handled via sms-item
       if (root.hasClass("sms-content") && root.closest(".sms-item").length) return;
 
       const text =
@@ -76,14 +93,14 @@ export const zsrqProvider: SmsProvider = {
       if (!text || text.length < 4) return;
       if (/免费在线接收|版权|copyright/i.test(text) && text.length < 40) return;
 
-      const from =
-        root.find(".sms-sender").text().trim() ||
-        "Unknown";
+      const from = root.find(".sms-sender").text().trim() || "Unknown";
+      const timeText = root.find(".sms-time").text().trim();
+      const receivedAt = parseRelativeTime(timeText, now);
 
       messages.push({
         from,
         text,
-        receivedAt: Date.now(),
+        receivedAt,
         otp: extractOtp(text),
       });
     });

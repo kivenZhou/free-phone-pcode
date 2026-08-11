@@ -71,7 +71,7 @@ export const freephonenumProvider: SmsProvider = {
       messages.push({
         from,
         text,
-        receivedAt: Date.now(),
+        receivedAt: 0, // freephonenum does not expose message timestamps
         otp: extractOtp(text),
       });
     });

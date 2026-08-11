@@ -29,6 +29,12 @@ export interface SmsProvider {
   name: string;
   /** Default line type for this free public source */
   defaultLineType?: LineType;
+  /**
+   * Whether this provider supports real-time message fetching.
+   * Providers that are bot-protected (e.g. SMS24) should set this to false
+   * so the API returns an empty list instead of a 502.
+   */
+  supportsMessages?: boolean;
   listNumbers(): Promise<NormalizedNumber[]>;
   listMessages(
     number: string,

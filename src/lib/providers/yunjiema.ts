@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { extractOtp } from "../otp";
-import { fetchText, normalizeE164, sleep } from "../http";
+import { fetchText, normalizeE164, parseRelativeTime, sleep } from "../http";
 import type { NormalizedMessage, NormalizedNumber, SmsProvider } from "./types";
 
 const BASE = "https://yunjiema.net";
@@ -77,18 +77,20 @@ export const yunjiemaProvider: SmsProvider = {
     const $ = cheerio.load(html);
     const messages: NormalizedMessage[] = [];
 
+    const now = Date.now();
     $(".bg-messages, .row.border-bottom.table-hover").each((_, el) => {
       const from =
         $(el).find(".mobile_hide").first().text().trim() ||
         $(el).find(".message_head").text().replace(/^From\s+/i, "").replace(/\s*\(.*\)$/, "").trim() ||
         "Unknown";
       const cols = $(el).find('[class*="col-"]');
-      let text = "";
-      if (cols.length >= 3) {
-        text = $(cols[cols.length - 1]).text().replace(/\s+/g, " ").trim();
-      } else {
-        text = $(el).text().replace(/\s+/g, " ").trim();
-      }
+      if (cols.length < 2) return;
+      const timeText = cols.length >= 3
+        ? $(cols[cols.length - 2]).text().replace(/\s+/g, " ").trim()
+        : "";
+      const text = cols.length >= 3
+        ? $(cols[cols.length - 1]).text().replace(/\s+/g, " ").trim()
+        : $(el).text().replace(/\s+/g, " ").trim();
       if (!text || text.length < 5) return;
       if (/^ADS$/i.test(from) || /adsbygoogle|Google Ads/i.test(text)) return;
       if (/register|login to the website before view SMS/i.test(text)) return;
@@ -96,7 +98,7 @@ export const yunjiemaProvider: SmsProvider = {
       messages.push({
         from,
         text,
-        receivedAt: Date.now(),
+        receivedAt: parseRelativeTime(timeText, now),
         otp: extractOtp(text),
       });
     });

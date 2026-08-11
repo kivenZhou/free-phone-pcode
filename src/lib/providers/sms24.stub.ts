@@ -4,6 +4,7 @@ import type { SmsProvider } from "./types";
 export const sms24Provider: SmsProvider = {
   id: "sms24",
   name: "SMS24",
+  supportsMessages: false,
 
   async listNumbers() {
     throw new Error("SMS24 is unavailable without native modules");

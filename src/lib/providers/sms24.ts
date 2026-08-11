@@ -156,6 +156,7 @@ async function fetchTextRetry(url: string, attempts = 3): Promise<string> {
 export const sms24Provider: SmsProvider = {
   id: "sms24",
   name: "SMS24",
+  supportsMessages: false,
 
   async listNumbers(): Promise<NormalizedNumber[]> {
     const now = Date.now();

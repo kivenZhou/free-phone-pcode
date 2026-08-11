@@ -98,11 +98,13 @@ export function listProviderMeta() {
       id: p.id,
       name: p.name,
       enabled: !disabled.has(p.id),
+      supportsMessages: p.supportsMessages !== false,
     })),
     ...NATIVE_PROVIDER_META.map((p) => ({
       id: p.id,
       name: p.name,
       enabled: !disabled.has(p.id) && !skipNative,
+      supportsMessages: false, // SMS24: bot-protected, cannot fetch messages
     })),
   ];
 }
