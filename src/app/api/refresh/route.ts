@@ -19,23 +19,25 @@ export async function POST(req: NextRequest) {
   }
 
   let provider: string | undefined;
+  let cont = false;
   try {
-    const body = (await req.json()) as { provider?: string };
+    const body = (await req.json()) as { provider?: string; continue?: boolean };
     provider = body.provider;
+    cont = Boolean(body.continue);
   } catch {
     // empty body is fine
   }
 
-  // Cloudflare / serverless: return immediately; sync continues via waitUntil.
+  // Cloudflare / serverless: return immediately; sync continues via waitUntil + batch chain.
   if (process.env.DISABLE_BACKGROUND_REFRESH === "1") {
-    const status = await startRefreshInBackground(provider);
+    const status = await startRefreshInBackground(provider, { continue: cont });
     return NextResponse.json(status);
   }
 
-  if (await isRefreshRunning()) {
+  if (!cont && (await isRefreshRunning())) {
     return NextResponse.json({ started: false, syncing: true, alreadyRunning: true });
   }
 
-  const result = await refreshProviders(provider);
-  return NextResponse.json({ started: true, syncing: false, ...result });
+  const result = await refreshProviders(provider, { continue: cont });
+  return NextResponse.json({ started: true, syncing: !result.done, ...result });
 }

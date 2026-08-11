@@ -151,6 +151,7 @@ npm run preview:cf
 | 项目 | 说明 |
 |------|------|
 | SMS24 / impit | 依赖原生 `.node` 模块，**无法在 Workers 运行**；Cloudflare 构建会自动设 `SKIP_NATIVE_MODULES=1` 跳过 |
+| 全量同步 | Cloudflare 上**分批**进行（默认每次 1 个来源并自动接力），避免免费版子请求上限；短信仍按需直连 |
 | Node 自托管 | `npm run build && npm start` 可使用完整 SMS24（含 `impit`） |
 | KV 体积 | 单 key 上限约 25MB，号码特别多时需后续拆分存储 |
 | Worker 体积 | 免费版压缩后约 3MB 上限，构建失败可考虑 Workers Paid |
@@ -190,7 +191,8 @@ npm run build:pages
 |------|--------|------|
 | `DISABLED_PROVIDERS` | — | 逗号分隔的 provider id，禁用指定来源 |
 | `SKIP_NATIVE_MODULES` | — | 设为 `1` 时跳过 SMS24（Cloudflare 构建/部署脚本已自动设置） |
-| `REFRESH_CONCURRENCY` | `5` | 同时同步的来源数量 |
+| `REFRESH_CONCURRENCY` | `5` / CF 上 `1` | 同批内并发抓取的来源数 |
+| `REFRESH_BATCH_SIZE` | `100` / CF 上 `1` | 每次 Worker 调用同步几个来源（CF 自动分批接力） |
 | `SMS24_MAX_PAGES` | `20` | SMS24 每个国家最多抓取页数 |
 | `SMS24_CONCURRENCY` | `10` | SMS24 页面抓取并发 |
 | `REFRESH_TOKEN` | — | 若设置，则 `POST /api/refresh` 需 `Authorization: Bearer <token>` |

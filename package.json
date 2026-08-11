@@ -28,7 +28,7 @@
     "preview:cf": "SKIP_NATIVE_MODULES=1 opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy:cf": "SKIP_NATIVE_MODULES=1 opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "lint": "eslint"
   },
   "dependencies": {
